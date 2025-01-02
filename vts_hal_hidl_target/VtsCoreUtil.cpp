@@ -14,7 +14,13 @@
  * limitations under the License.
  */
 
+#ifdef _MSC_VER
+#include <stdio.h>
+#include <corecrt_io.h>
+#define popen _popen
+#else
 #include <unistd.h>
+#endif
 
 #include <log/log.h>
 #include <iostream>
@@ -36,14 +42,24 @@ bool checkSubstringInCommandOutput(const char* cmd, const char* feature) {
     __android_log_print(ANDROID_LOG_INFO, LOG_TAG,
                         "checkSubstringInCommandOutput check with cmd: %s",
                         cmd);
+#ifdef _MSC_VER
+    char buffer[2048] = { 0 };
+    line = buffer;
+    while(fgets( line, 2048, p )) {
+#else
     while (getline(&line, &len, p) > 0) {
+#endif
       // TODO: b/148904287, check if we should match the whole line
       if (strstr(line, feature)) {
         hasFeature = true;
         break;
       }
     }
+#ifdef _MSC_VER
+    _pclose( p );
+#else
     pclose(p);
+#endif
   } else {
     __android_log_print(ANDROID_LOG_ERROR, LOG_TAG, "popen failed: %d", errno);
     _exit(EXIT_FAILURE);
